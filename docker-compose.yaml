@@ -1,0 +1,21 @@
+version: '3.0'
+
+networks:
+  station-interface:
+    external: true
+    name: station-network
+
+services:
+  webhook2email:
+    image: hezhihu89/webhook2email:latest
+    container_name: webhook2email
+    restart: unless-stopped
+    ports:
+      - 8380:80
+    environment:
+      - SMTP_HOST=smtp.feishu.cn
+      - SMTP_PORT=587
+      - SMTP_PASSWORD=
+      - SMTP_FROM=notification@osfile.cn
+      - SMTP_SEND_TO=354137379@qq.com
+      - SMTP_FROM_NAME=HomeStation Notification
