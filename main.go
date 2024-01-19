@@ -46,7 +46,7 @@ func webHookToEmailHandler(rw http.ResponseWriter, request *http.Request) {
 	var emailTemplate = "From:" + name + "\n" +
 		"Subject:" + title + "\n" +
 		"To: " + sendTo + "\n" +
-		"Content-Type:text/html; charset=UTF-8" + "\n\n" + message
+		"Content-Type:text/html; charset=UTF-8;" + "\n\n" + message
 
 	auth := smtp.PlainAuth("", from, password, host)
 	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from,
@@ -56,7 +56,7 @@ func webHookToEmailHandler(rw http.ResponseWriter, request *http.Request) {
 		rw.WriteHeader(501)
 		rw.Write([]byte(err.Error()))
 	} else {
-		log.Println("发送成功 >>> [", sendTo, "]")
+		log.Println("发送成功 >>>", sendTos)
 		rw.WriteHeader(200)
 		rw.Write([]byte("发送成功"))
 	}
