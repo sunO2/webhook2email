@@ -21,7 +21,8 @@ RUN upx -9 webhook2email
 ## 第二次构建 也就是go运行环境
 FROM alpine:3.14
 
-WORKDIR /
+WORKDIR /app
 ## 将 第一阶段 AS gobuild 的产物拷贝到 二次构建的运行环境进行运行
-COPY --from=gobuild /app/webhook2email ./
-CMD [ "/webhook2email" ]
+COPY --from=gobuild /app/webhook2email .
+COPY mail.html .
+CMD [ "/app/webhook2email" ]

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"net/smtp"
@@ -26,16 +27,19 @@ func webHookToEmailHandler(rw http.ResponseWriter, request *http.Request) {
 	if len(sendTo) > 0 {
 		sendTos = strings.Split(sendTo, ",")
 	}
+	tmpl, _ := template.ParseFiles("./mail.html")
+	htmlTemplate := &strings.Builder{}
+	tmpl.Execute(htmlTemplate, message)
+	message = htmlTemplate.String()
 
-	msg := fmt.Sprintf("From: %s\r\nSubject: %s\r\nTo: %s\r\nContent-Type:text/html;charset=UTF-8\r\n\r\n%s",
-		name,
-		title,
-		sendTo,
-		message)
+	var emailTemplate = "From:" + name + "\n" +
+		"Subject:" + title + "\n" +
+		"To: " + sendTo + "\n" +
+		"Content-Type:text/html; charset=UTF-8" + "\n\n" + message
 
 	auth := smtp.PlainAuth("", from, password, host)
 	err := smtp.SendMail(fmt.Sprintf("%s:%s", host, port), auth, from,
-		sendTos, []byte(msg))
+		sendTos, []byte(emailTemplate))
 	if nil != err {
 		log.Println("--------》》》》》", err)
 		rw.WriteHeader(501)
@@ -56,5 +60,8 @@ func main() {
 	name = os.Getenv("SMTP_FROM_NAME")
 
 	http.HandleFunc("/webhook2email", webHookToEmailHandler)
-	http.ListenAndServe(":80", nil)
+	err := http.ListenAndServe(":80", nil)
+	if nil != err {
+		fmt.Println(err)
+	}
 }
