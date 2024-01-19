@@ -29,7 +29,18 @@ func webHookToEmailHandler(rw http.ResponseWriter, request *http.Request) {
 	}
 	tmpl, _ := template.ParseFiles("./mail.html")
 	htmlTemplate := &strings.Builder{}
-	tmpl.Execute(htmlTemplate, message)
+
+	data := struct {
+		Title   string
+		From    string
+		Message template.HTML
+	}{
+		Title:   title,
+		Message: template.HTML(message),
+		From:    name,
+	}
+
+	tmpl.Execute(htmlTemplate, data)
 	message = htmlTemplate.String()
 
 	var emailTemplate = "From:" + name + "\n" +
