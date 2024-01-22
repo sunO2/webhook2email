@@ -49,16 +49,16 @@
                                                     <div style="font-family:Roboto-Regular,Helvetica,Arial,sans-serif;font-size:14px;color:rgba(0,0,0,0.87);line-height:20px;padding-top:20px;text-align:center;max-width:210pt;word-break:break-word">
                                                         {{.Message}}
                                                         <div style="padding-top:32px;text-align:center"><a
-                                                                href="https://nas.osfile.cn"
+                                                                href="{{.ActionUrl}}"
                                                                 style="font-family:'Google Sans',Roboto,RobotoDraft,Helvetica,Arial,sans-serif;line-height:16px;color:#ffffff;font-weight:400;text-decoration:none;font-size:14px;display:inline-block;padding:10px 24px;background-color:#4184f3;border-radius:5px;min-width:90px"
                                                                 target="_blank"
-                                                                data-saferedirecturl=" https://nas.osfile.cn">查看活动</a>
+                                                                data-saferedirecturl="{{.ActionUrl}}">查看活动</a>
                                                         </div>
                                                     </div>
                                                     <div
                                                         style="padding-top:20px;font-size:12px;line-height:16px;color:#5f6368;letter-spacing:0.3px;text-align:center">
                                                         您也可以访问以下网址查看安全性活动：<br><a
-                                                            style="color:rgba(0,0,0,0.87);text-decoration:inherit">https://nas.osfile.cn/<wbr>notifications</a>
+                                                            style="color:rgba(0,0,0,0.87);text-decoration:inherit">{{.ActionUrl}}<wbr></a>
                                                     </div>
                                                 </div>
                                                 <div style="text-align:left">

@@ -23,6 +23,11 @@ func webHookToEmailHandler(rw http.ResponseWriter, request *http.Request) {
 	title := request.URL.Query().Get("title")
 	message := request.URL.Query().Get("message")
 	sendTo := request.URL.Query().Get("sendTo")
+	actionUrl := request.URL.Query().Get("action-url")
+	if len(actionUrl) <= 0 {
+		actionUrl = "https://nas.osfile.cn"
+	}
+
 	sendTos := []string{smtpSendTo}
 	if len(sendTo) > 0 {
 		sendTos = strings.Split(sendTo, ",")
@@ -31,13 +36,15 @@ func webHookToEmailHandler(rw http.ResponseWriter, request *http.Request) {
 	htmlTemplate := &strings.Builder{}
 
 	data := struct {
-		Title   string
-		From    string
-		Message template.HTML
+		Title     string
+		From      string
+		Message   template.HTML
+		ActionUrl string
 	}{
-		Title:   title,
-		Message: template.HTML(message),
-		From:    name,
+		Title:     title,
+		Message:   template.HTML(message),
+		From:      from,
+		ActionUrl: actionUrl,
 	}
 
 	tmpl.Execute(htmlTemplate, data)
