@@ -24,9 +24,6 @@ func webHookToEmailHandler(rw http.ResponseWriter, request *http.Request) {
 	message := request.URL.Query().Get("message")
 	sendTo := request.URL.Query().Get("sendTo")
 	actionUrl := request.URL.Query().Get("action-url")
-	if len(actionUrl) <= 0 {
-		actionUrl = "https://nas.osfile.cn"
-	}
 
 	sendTos := []string{smtpSendTo}
 	if len(sendTo) > 0 {

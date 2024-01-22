@@ -16,6 +16,6 @@ services:
       - SMTP_HOST=smtp.feishu.cn
       - SMTP_PORT=587
       - SMTP_PASSWORD=
-      - SMTP_FROM=notification@osfile.cn
-      - SMTP_SEND_TO=354137379@qq.com
+      - SMTP_FROM=
+      - SMTP_SEND_TO=
       - SMTP_FROM_NAME=HomeStation Notification
