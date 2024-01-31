@@ -15,7 +15,10 @@ services:
     environment:
       - SMTP_HOST=smtp.feishu.cn
       - SMTP_PORT=587
+      - IMAP_HOST=imap.feishu.cn
+      - IMAP_PORT=993
       - SMTP_PASSWORD=
       - SMTP_FROM=
       - SMTP_SEND_TO=
       - SMTP_FROM_NAME=HomeStation Notification
+      - DEFAULR_ACTION_URL=

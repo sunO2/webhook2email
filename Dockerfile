@@ -13,7 +13,8 @@ WORKDIR /app
 COPY go.mod .
 RUN go mod download && go mod verify
 ## 拷贝 所有文件到工作目录
-COPY main.go .
+COPY . .
+
 ## 构建 
 RUN go build -ldflags "-s -w" -o webhook2email
 RUN upx -9 webhook2email
