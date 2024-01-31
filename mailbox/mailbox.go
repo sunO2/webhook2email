@@ -108,7 +108,6 @@ func (iClient *IMAPClient) parseEmailOfMessage(numMessages uint32, event NewMess
 		fmt.Println("为什么会是空的？？？？？")
 		return
 	}
-
 	var bodySection imapclient.FetchItemDataBodySection
 	ok := false
 	for {
@@ -144,7 +143,7 @@ func (iClient *IMAPClient) parseEmailOfMessage(numMessages uint32, event NewMess
 		log.Printf("failed to parse Subject header field: %v", err)
 		title = ""
 	} else {
-		log.Printf("Subject: %v", subject)
+		// log.Printf("Subject: %v", subject)
 		title = subject
 	}
 
@@ -163,14 +162,13 @@ func (iClient *IMAPClient) parseEmailOfMessage(numMessages uint32, event NewMess
 			// This is the message's text (can be plain-text or HTML)
 			b, _ := io.ReadAll(p.Body)
 			message = string(b)
-			log.Printf("Inline text: %v", message)
+			// log.Printf("Inline text: %v", message)
 		case *mail.AttachmentHeader:
 			// This is an attachment
 			filename, _ := h.Filename()
 			log.Printf("Attachment: %v", filename)
 		}
 	}
-	fmt.Println("拿到信息了 title=", title, "message=", message)
 	patt := `https?://[a-zA-Z0-9.-]+(/S+)?`
 	re := regexp.MustCompile(patt)
 	urls := re.FindAllString(message, -1)

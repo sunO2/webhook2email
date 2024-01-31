@@ -98,7 +98,6 @@ func createMailBox() {
 }
 
 func newMailMessageEvent(title, message, actionUrl string) {
-	fmt.Println("收到新消息了 title= ", title, " message=", message)
 	sendTos := []string{smtpSendTo}
 	var templateMessage = createTemplateMessage(title, message, actionUrl)
 	if err := sendToEmail(title, templateMessage, sendTos); nil != err {
