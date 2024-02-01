@@ -89,7 +89,6 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 				break
 			}
 			// 休眠能解决 ？？？？
-			time.Sleep(5*time.Second)
 			err = idle.Close()
 			if err != nil {
 				log.Println("定时 Close 异常",err)
@@ -101,10 +100,13 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 				log.Println("定时 Wait 异常",err)
 				continue
 			}
+			
 
 			if nil != messageNum {
 				time.Sleep(2 * time.Second)
 				c.parseEmailOfMessage(*messageNum, event)
+			}else{
+				time.Sleep(5*time.Second)
 			}
 			log.Println("下一次轮询")
 		}
