@@ -6,6 +6,7 @@ import (
 	"log"
 	"mime"
 	"regexp"
+	"time"
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
@@ -96,6 +97,7 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 			}
 
 			if nil != messageNum {
+				time.Sleep(2 * time.Second)
 				c.parseEmailOfMessage(*messageNum, event)
 			}
 			fmt.Println("下一次轮询")
