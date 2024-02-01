@@ -92,7 +92,7 @@ func createMailBox() {
 		if err := client.Login(from, password); nil != err {
 			fmt.Println("登陆失败")
 		} else {
-			go client.Idle(newMailMessageEvent)
+			client.Idle(newMailMessageEvent)
 		}
 	}
 }
@@ -122,7 +122,7 @@ func main() {
 
 	createMailBox()
 	http.HandleFunc("/webhook2email", webHookToEmailHandler)
-	err := http.ListenAndServe(":80", nil)
+	err := http.ListenAndServe(":8011", nil)
 	if nil != err {
 		fmt.Println(err)
 	}

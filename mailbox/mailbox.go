@@ -16,9 +16,8 @@ import (
 type NewMessageEvent = func(title, message, actionUrl string)
 
 type IMAPClient struct {
-	IDleClient *imapclient.Client
 	Client     *imapclient.Client
-	NewMessage chan uint32
+	NewMessage chan *uint32
 }
 
 var iClient *IMAPClient
@@ -28,7 +27,7 @@ func mailBoxNewMessage(data *imapclient.UnilateralDataMailbox) {
 	if data.NumMessages != nil && nil != iClient {
 		log.Println("邮件接受客户端 '接收到了新' 消息", data.NumMessages)
 		if data.NumMessages != nil {
-			iClient.NewMessage <- *data.NumMessages
+			iClient.NewMessage <- data.NumMessages
 		}
 	}
 }
@@ -47,30 +46,17 @@ func NewClient(host, port string) (*IMAPClient, error) {
 		},
 	}
 
-	idleClient, err := imapclient.DialTLS(fmt.Sprintf("%s:%s", host, port), options)
-	if nil != err {
-		fmt.Println("邮件监听客户端 '连接' 异常了：", err)
-		return nil, err
-	}
-
 	if client, err := imapclient.DialTLS(fmt.Sprintf("%s:%s", host, port), options); nil != err {
 		fmt.Println("邮件接受客户端 '连接' 异常了：", err)
 		return nil, err
 	} else {
 		fmt.Println("创建邮箱客户端成功", err)
-		iClient = &IMAPClient{IDleClient: idleClient, Client: client, NewMessage: make(chan uint32, 10)}
+		iClient = &IMAPClient{Client: client, NewMessage: make(chan *uint32, 10)}
 	}
 	return iClient, nil
 }
 
 func (iClient *IMAPClient) Login(from, password string) error {
-	if err := iClient.IDleClient.Login(from, password).Wait(); nil != err {
-		fmt.Println("邮件监听客户端 '登陆' 异常了：", err)
-		return err
-	}
-	if err := iClient.IDleClient.Select("INBOX", nil); err != nil {
-		fmt.Println("邮件监听客户端 '进入邮箱' 了：")
-	}
 	if err := iClient.Client.Login(from, password).Wait(); nil != err {
 		fmt.Println("邮件接受客户端 '登陆' 异常了：", err)
 		return err
@@ -82,17 +68,39 @@ func (iClient *IMAPClient) Login(from, password string) error {
 }
 
 func (iClient *IMAPClient) Idle(event NewMessageEvent) {
-	if _, err := iClient.IDleClient.Idle(); nil != err {
-		fmt.Println("邮件接收监听失败", err)
-	} else {
+	go func(c *IMAPClient) {
 		for {
-			i, ok := <-iClient.NewMessage
-			if ok {
-				iClient.parseEmailOfMessage(i, event)
+			fmt.Println("开始监听")
+			idle, err := c.Client.Idle()
+			if err != nil {
+				fmt.Println("定时 Idle 异常")
+				continue
 			}
-		}
-	}
 
+			var messageNum *uint32
+			select {
+			case messageNum = <-c.NewMessage:
+				fmt.Println("收到消息了。。。。。。。。", *messageNum)
+				break
+			}
+			err = idle.Close()
+			if err != nil {
+				fmt.Println("定时 Close 异常")
+				continue
+			}
+
+			err = idle.Wait()
+			if err != nil {
+				fmt.Println("定时 Wait 异常")
+				continue
+			}
+
+			if nil != messageNum {
+				c.parseEmailOfMessage(*messageNum, event)
+			}
+			fmt.Println("下一次轮询")
+		}
+	}(iClient)
 }
 
 func (iClient *IMAPClient) parseEmailOfMessage(numMessages uint32, event NewMessageEvent) {
