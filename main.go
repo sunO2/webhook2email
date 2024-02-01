@@ -84,13 +84,13 @@ func sendToEmail(title, message string, sendTos []string) error {
 
 // / 监听邮箱变化 并且转发
 func createMailBox() {
-	fmt.Println("开启IMAP Client")
+	log.Println("开启IMAP Client")
 	if client, err := mailbox.NewClient(imapHost, imapPort); nil != err {
-		fmt.Println("客户端创建失败")
+		log.Println("客户端创建失败")
 	} else {
-		fmt.Println("开启IMAP Client成功")
+		log.Println("开启IMAP Client成功")
 		if err := client.Login(from, password); nil != err {
-			fmt.Println("登陆失败")
+			log.Println("登陆失败")
 		} else {
 			client.Idle(newMailMessageEvent)
 		}
@@ -101,9 +101,9 @@ func newMailMessageEvent(title, message, actionUrl string) {
 	sendTos := []string{smtpSendTo}
 	var templateMessage = createTemplateMessage(title, message, actionUrl)
 	if err := sendToEmail(title, templateMessage, sendTos); nil != err {
-		fmt.Println("转发失败")
+		log.Println("转发失败")
 	} else {
-		fmt.Println("转发成功")
+		log.Println("转发成功")
 	}
 }
 
@@ -124,6 +124,6 @@ func main() {
 	http.HandleFunc("/webhook2email", webHookToEmailHandler)
 	err := http.ListenAndServe(":8011", nil)
 	if nil != err {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }

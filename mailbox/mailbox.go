@@ -48,10 +48,10 @@ func NewClient(host, port string) (*IMAPClient, error) {
 	}
 
 	if client, err := imapclient.DialTLS(fmt.Sprintf("%s:%s", host, port), options); nil != err {
-		fmt.Println("邮件接受客户端 '连接' 异常了：", err)
+		log.Println("邮件接受客户端 '连接' 异常了：", err)
 		return nil, err
 	} else {
-		fmt.Println("创建邮箱客户端成功", err)
+		log.Println("创建邮箱客户端成功", err)
 		iClient = &IMAPClient{Client: client, NewMessage: make(chan *uint32, 10)}
 	}
 	return iClient, nil
@@ -59,40 +59,46 @@ func NewClient(host, port string) (*IMAPClient, error) {
 
 func (iClient *IMAPClient) Login(from, password string) error {
 	if err := iClient.Client.Login(from, password).Wait(); nil != err {
-		fmt.Println("邮件接受客户端 '登陆' 异常了：", err)
+		log.Println("邮件接受客户端 '登陆' 异常了：", err)
 		return err
 	}
 	if err := iClient.Client.Select("INBOX", nil); err != nil {
-		fmt.Println("邮件接受客户端 '进入邮箱' 了：")
+		log.Println("邮件接受客户端 '进入邮箱' 了：")
 	}
 	return nil
 }
 
 func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 	go func(c *IMAPClient) {
+		ticker := time.NewTicker(20 * time.Minute)
 		for {
-			fmt.Println("开始监听")
+			log.Println("开始监听")
 			idle, err := c.Client.Idle()
 			if err != nil {
-				fmt.Println("定时 Idle 异常")
+				log.Println("定时 Idle 异常",err)
 				continue
 			}
 
 			var messageNum *uint32
 			select {
 			case messageNum = <-c.NewMessage:
-				fmt.Println("收到消息了。。。。。。。。", *messageNum)
+				log.Println("收到消息了。。。。。。。。", *messageNum)
+				break
+			case <-ticker.C:
+				log.Println("20分钟到了 重新 IDLE")
 				break
 			}
+			// 休眠能解决 ？？？？
+			time.Sleep(5*time.Second)
 			err = idle.Close()
 			if err != nil {
-				fmt.Println("定时 Close 异常")
+				log.Println("定时 Close 异常",err)
 				continue
 			}
 
 			err = idle.Wait()
 			if err != nil {
-				fmt.Println("定时 Wait 异常")
+				log.Println("定时 Wait 异常",err)
 				continue
 			}
 
@@ -100,7 +106,7 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 				time.Sleep(2 * time.Second)
 				c.parseEmailOfMessage(*messageNum, event)
 			}
-			fmt.Println("下一次轮询")
+			log.Println("下一次轮询")
 		}
 	}(iClient)
 }
@@ -115,7 +121,7 @@ func (iClient *IMAPClient) parseEmailOfMessage(numMessages uint32, event NewMess
 	defer msg.Close()
 	msgCmd := msg.Next()
 	if nil == msgCmd {
-		fmt.Println("为什么会是空的？？？？？")
+		log.Println("为什么会是空的？？？？？")
 		return
 	}
 	var bodySection imapclient.FetchItemDataBodySection
