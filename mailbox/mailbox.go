@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"mime"
+	"os"
 	"regexp"
 	"time"
 
@@ -19,9 +20,13 @@ type NewMessageEvent = func(title, message, actionUrl string)
 type IMAPClient struct {
 	Client     *imapclient.Client
 	NewMessage chan *uint32
+	host       string
+	port       string
+	password   string
+	from       string
 }
 
-var iClient *IMAPClient
+var iClient *IMAPClient = &IMAPClient{NewMessage: make(chan *uint32, 10)}
 
 // / 邮箱收到新的邮件
 func mailBoxNewMessage(data *imapclient.UnilateralDataMailbox) {
@@ -35,6 +40,7 @@ func mailBoxNewMessage(data *imapclient.UnilateralDataMailbox) {
 
 func NewClient(host, port string) (*IMAPClient, error) {
 	options := &imapclient.Options{
+		DebugWriter: os.Stdout,
 		WordDecoder: &mime.WordDecoder{CharsetReader: charset.Reader},
 		UnilateralDataHandler: &imapclient.UnilateralDataHandler{
 			Expunge: func(seqNum uint32) {
@@ -52,9 +58,16 @@ func NewClient(host, port string) (*IMAPClient, error) {
 		return nil, err
 	} else {
 		log.Println("创建邮箱客户端成功", err)
-		iClient = &IMAPClient{Client: client, NewMessage: make(chan *uint32, 10)}
+		iClient.Client = client
 	}
+	iClient.host = host
+	iClient.port = port
 	return iClient, nil
+}
+
+func (iClient *IMAPClient) reConnect() {
+	NewClient(iClient.host, iClient.port)
+	iClient.Login(iClient.from, iClient.password)
 }
 
 func (iClient *IMAPClient) Login(from, password string) error {
@@ -65,18 +78,26 @@ func (iClient *IMAPClient) Login(from, password string) error {
 	if err := iClient.Client.Select("INBOX", nil); err != nil {
 		log.Println("邮件接受客户端 '进入邮箱' 了：")
 	}
+	iClient.from = from
+	iClient.password = password
 	return nil
 }
 
 func (iClient *IMAPClient) Idle(event NewMessageEvent) {
+	wait := func() {
+		time.Sleep(5 * time.Second)
+	}
+
 	go func(c *IMAPClient) {
 		ticker := time.NewTicker(20 * time.Minute)
+		defer ticker.Stop()
 		for {
 			log.Println("开始监听")
 			idle, err := c.Client.Idle()
 			if err != nil {
 				log.Println("定时 Idle 异常", err)
-				continue
+				wait()
+				return
 			}
 
 			var messageNum *uint32
@@ -88,23 +109,25 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 				log.Println("20分钟到了 重新 IDLE")
 				break
 			}
+			log.Println("开始处理消息")
 			// 休眠能解决 ？？？？
 			err = idle.Close()
 			if err != nil {
 				log.Println("定时 Close 异常", err)
-				continue
+				wait()
 			}
 
 			err = idle.Wait()
 			if err != nil {
 				log.Println("定时 Wait 异常", err)
+				wait()
 				continue
 			}
 			if nil != messageNum {
-				time.Sleep(2 * time.Second)
+				wait()
 				c.parseEmailOfMessage(*messageNum, event)
 			} else {
-				time.Sleep(5 * time.Second)
+				wait()
 			}
 			log.Println("下一次轮询")
 		}
