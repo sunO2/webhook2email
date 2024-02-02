@@ -89,7 +89,7 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 	}
 
 	go func(c *IMAPClient) {
-		ticker := time.NewTicker(20 * time.Minute)
+		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
 		for {
 			log.Println("开始监听")
@@ -106,7 +106,7 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 				log.Println("收到消息了。。。。。。。。", *messageNum)
 				break
 			case <-ticker.C:
-				log.Println("20分钟到了 重新 IDLE")
+				log.Println("5 分钟到了 重新 IDLE")
 				break
 			}
 			log.Println("开始处理消息")
