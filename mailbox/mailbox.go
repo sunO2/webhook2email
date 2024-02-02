@@ -17,6 +17,9 @@ import (
 
 type NewMessageEvent = func(title, message, actionUrl string)
 
+// idle 重新启动时间
+var reStartIdle = 5 * time.Minute
+
 type IMAPClient struct {
 	Client     *imapclient.Client
 	NewMessage chan *uint32
@@ -89,13 +92,14 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 	}
 
 	go func(c *IMAPClient) {
-		ticker := time.NewTicker(5 * time.Minute)
+		ticker := time.NewTicker(reStartIdle)
 		defer ticker.Stop()
 		for {
 			log.Println("开始监听")
 			idle, err := c.Client.Idle()
 			if err != nil {
 				log.Println("定时 Idle 异常", err)
+				c.Client.Close()
 				wait()
 				return
 			}
@@ -107,6 +111,7 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 				break
 			case <-ticker.C:
 				log.Println("5 分钟到了 重新 IDLE")
+				ticker.Reset(reStartIdle)
 				break
 			}
 			log.Println("开始处理消息")
@@ -142,6 +147,7 @@ func (iClient *IMAPClient) parseEmailOfMessage(numMessages uint32, event NewMess
 	fetchOptions := &imap.FetchOptions{Envelope: true, UID: true, BodySection: []*imap.FetchItemBodySection{{}}}
 	msg := iClient.Client.Fetch(seqSet, fetchOptions)
 	defer msg.Close()
+
 	msgCmd := msg.Next()
 	if nil == msgCmd {
 		log.Println("为什么会是空的？？？？？")
@@ -162,60 +168,61 @@ func (iClient *IMAPClient) parseEmailOfMessage(numMessages uint32, event NewMess
 	if !ok {
 		log.Fatalf("FETCH command did not return body section")
 	}
-	mr, err := mail.CreateReader(bodySection.Literal)
-	if err != nil {
+	if mr, err := mail.CreateReader(bodySection.Literal); nil != err {
 		log.Fatalf("failed to create mail reader: %v", err)
-	}
-	h := mr.Header
-	if date, err := h.Date(); err != nil {
-		log.Printf("failed to parse Date header field: %v", err)
 	} else {
-		log.Printf("Date: %v", date)
-	}
-	if to, err := h.AddressList("To"); err != nil {
-		log.Printf("failed to parse To header field: %v", err)
-	} else {
-		log.Printf("To: %v", to)
-	}
-	var title string
-	if subject, err := h.Text("Subject"); err != nil {
-		log.Printf("failed to parse Subject header field: %v", err)
-		title = ""
-	} else {
-		// log.Printf("Subject: %v", subject)
-		title = subject
-	}
-
-	var message string
-	// Process the message's parts
-	for {
-		p, err := mr.NextPart()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			log.Fatalf("failed to read message part: %v", err)
+		defer mr.Close()
+		h := mr.Header
+		if date, err := h.Date(); err != nil {
+			log.Printf("failed to parse Date header field: %v", err)
+		} else {
+			log.Printf("Date: %v", date)
+		}
+		if to, err := h.AddressList("To"); err != nil {
+			log.Printf("failed to parse To header field: %v", err)
+		} else {
+			log.Printf("To: %v", to)
+		}
+		var title string
+		if subject, err := h.Text("Subject"); err != nil {
+			log.Printf("failed to parse Subject header field: %v", err)
+			title = ""
+		} else {
+			// log.Printf("Subject: %v", subject)
+			title = subject
 		}
 
-		switch h := p.Header.(type) {
-		case *mail.InlineHeader:
-			// This is the message's text (can be plain-text or HTML)
-			b, _ := io.ReadAll(p.Body)
-			message = string(b)
-			// log.Printf("Inline text: %v", message)
-		case *mail.AttachmentHeader:
-			// This is an attachment
-			filename, _ := h.Filename()
-			log.Printf("Attachment: %v", filename)
+		var message string
+		// Process the message's parts
+		for {
+			p, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				log.Fatalf("failed to read message part: %v", err)
+			}
+
+			switch h := p.Header.(type) {
+			case *mail.InlineHeader:
+				// This is the message's text (can be plain-text or HTML)
+				b, _ := io.ReadAll(p.Body)
+				message = string(b)
+				// log.Printf("Inline text: %v", message)
+			case *mail.AttachmentHeader:
+				// This is an attachment
+				filename, _ := h.Filename()
+				log.Printf("Attachment: %v", filename)
+			}
 		}
-	}
-	patt := `https?://[a-zA-Z0-9.-]+(/S+)?`
-	re := regexp.MustCompile(patt)
-	urls := re.FindAllString(message, -1)
-	var url string
-	if len(urls) > 0 {
-		url = urls[0]
+		patt := `https?://[a-zA-Z0-9.-]+(/S+)?`
+		re := regexp.MustCompile(patt)
+		urls := re.FindAllString(message, -1)
+		var url string
+		if len(urls) > 0 {
+			url = urls[0]
+		}
+
+		event(title, message, url)
 	}
 
-	event(title, message, url)
-	msg.Close()
 }
