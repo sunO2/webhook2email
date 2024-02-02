@@ -26,7 +26,7 @@ type IMAPClient struct {
 	from       string
 }
 
-var iClient *IMAPClient = &IMAPClient{NewMessage: make(chan *uint32, 10)}
+var iClient *IMAPClient = &IMAPClient{NewMessage: make(chan *uint32)}
 
 // / 邮箱收到新的邮件
 func mailBoxNewMessage(data *imapclient.UnilateralDataMailbox) {
