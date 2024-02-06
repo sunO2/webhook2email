@@ -95,7 +95,6 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 		ticker := time.NewTicker(reStartIdle)
 		defer ticker.Stop()
 		for {
-			log.Println("开始监听")
 			idle, err := c.Client.Idle()
 			if err != nil {
 				log.Println("定时 Idle 异常", err)
@@ -108,13 +107,11 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 			select {
 			case messageNum = <-c.NewMessage:
 				log.Println("收到消息了。。。。。。。。", *messageNum)
-				break
-			case <-ticker.C:
-				log.Println("5 分钟到了 重新 IDLE")
 				ticker.Reset(reStartIdle)
 				break
+			case <-ticker.C:
+				break
 			}
-			log.Println("开始处理消息")
 			// 休眠能解决 ？？？？
 			err = idle.Close()
 			if err != nil {
@@ -134,7 +131,6 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 			} else {
 				wait()
 			}
-			log.Println("下一次轮询")
 		}
 	}(iClient)
 }
