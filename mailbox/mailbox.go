@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"mime"
-	"os"
 	"regexp"
 	"time"
 
@@ -43,7 +42,7 @@ func mailBoxNewMessage(data *imapclient.UnilateralDataMailbox) {
 
 func NewClient(host, port string) (*IMAPClient, error) {
 	options := &imapclient.Options{
-		DebugWriter: os.Stdout,
+		DebugWriter: log.Default().Writer(),
 		WordDecoder: &mime.WordDecoder{CharsetReader: charset.Reader},
 		UnilateralDataHandler: &imapclient.UnilateralDataHandler{
 			Expunge: func(seqNum uint32) {
@@ -66,6 +65,10 @@ func NewClient(host, port string) (*IMAPClient, error) {
 	iClient.host = host
 	iClient.port = port
 	return iClient, nil
+}
+
+func (iClient *IMAPClient) close() {
+	iClient.Client.Close()
 }
 
 func (iClient *IMAPClient) reConnect() {
@@ -94,13 +97,13 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 	go func(c *IMAPClient) {
 		ticker := time.NewTicker(reStartIdle)
 		defer ticker.Stop()
-		for {
+
+		for loop := true; loop; {
 			idle, err := c.Client.Idle()
 			if err != nil {
 				log.Println("定时 Idle 异常", err)
-				c.Client.Close()
-				wait()
-				return
+				c.close()
+				loop = false
 			}
 
 			var messageNum *uint32
@@ -108,9 +111,11 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 			case messageNum = <-c.NewMessage:
 				log.Println("收到消息了。。。。。。。。", *messageNum)
 				ticker.Reset(reStartIdle)
-				break
 			case <-ticker.C:
-				break
+				{
+
+				}
+
 			}
 			// 休眠能解决 ？？？？
 			err = idle.Close()
@@ -123,7 +128,7 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 			if err != nil {
 				log.Println("定时 Wait 异常", err)
 				wait()
-				continue
+				loop = false
 			}
 			if nil != messageNum {
 				wait()
@@ -132,6 +137,9 @@ func (iClient *IMAPClient) Idle(event NewMessageEvent) {
 				wait()
 			}
 		}
+		c.close()
+		c.reConnect()
+		c.Idle(event)
 	}(iClient)
 }
 
